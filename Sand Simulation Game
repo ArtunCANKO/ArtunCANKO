@@ -1,0 +1,398 @@
+import pygame
+import random
+import numpy as np
+import math
+#Açıklama: Bu kısımda, pygame kütüphanesini, rastgele sayılar oluşturmak için random kütüphanesini,matrisleri işlemek için numpy kütüphanesini ve 
+#matematiksel fonksiyonları içeren math kütüphanesini içe aktardım.
+
+pygame.init()
+
+WIDTH, HEIGHT = 800, 800
+WIN = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Simulation")
+WHITE = (255, 255, 255)
+SAND = (194, 178, 128) 
+WATER = (0, 0, 255)
+PLANT = (0, 255, 0)
+T = 8  # Kum boyutu
+W = 4  # Su boyutu
+P = 6  # Bitki boyutu
+G = 8  # Barut boyutu
+#Açıklama: Oyun penceresinin boyutunu belirliyoruz ve gerekli renkler için sabitler tanımlıyoruz. Ayrıca, kum, su, bitki ve barut gibi farklı materyallerin boyutlarını b-
+# elirleyen değişkenler tanımladım.
+
+# Ayarlar menüsü için font
+FONT = pygame.font.SysFont('Arial', 30)
+SMALL_FONT = pygame.font.SysFont('Arial', 20)
+
+#Izgaraları yani gridleri belirledim
+class Grid:
+    def __init__(self):
+        # Genişlik ve yükseklikle uyumlu bir numpy dizisi oluşturdum.
+        self.grid = np.zeros((WIDTH*2, HEIGHT+T))
+        self.position = []
+
+    def addSand(self,pointX, pointY):
+        if pointX>=0 and pointX<=WIDTH and pointY>=0 and pointY<=HEIGHT:
+            if self.grid[pointX][pointY]==0:
+                self.grid[pointX][pointY]=1
+                self.position.append((pointX,pointY))
+    
+    def update_position(self):
+        for points in self.position:
+            listpoints= list(points)
+            self.position.remove(points)
+            
+            if points[1]>=HEIGHT-T:
+                self.position.append(points)
+
+                
+            elif self.grid[points[0]][points[1] + T] == 0:
+                self.grid[points[0]][points[1]] = 0
+                self.grid[points[0]][points[1] + T] = 1
+                listpoints[1] += T
+                points = tuple(listpoints)
+                self.position.append(points)
+
+            elif self.grid[points[0]][points[1] + T] == 1:
+                if (self.grid[points[0] + T][points[1] + T] == 1) and (self.grid[points[0] - T][points[1] + T] == 1):
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + T][points[1] + T] == 1) and (self.grid[points[0] - T][points[1] + T] == 0):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] - T][points[1] + T] = 1
+                    listpoints[0] -= T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + T][points[1] + T] == 0) and (self.grid[points[0] - T][points[1] + T] == 1):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] + T][points[1] + T] = 1
+                    listpoints[0] += T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                else:
+                    self.grid[points[0]][points[1]] = 0
+                    a = random.randint(0, 1)
+                    if a == 0:
+                        a = -1
+                    self.grid[points[0] + a * T][points[1] + T] = 1
+                    listpoints[0] += a * T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+    def draw(self, win):
+        for points in self.position:
+            pygame.draw.rect(win, SAND, (points[0], points[1], T, T), 0)
+
+# Su ızgarası sınıfını tanımladım gene.
+class WaterGrid:
+    def __init__(self):
+        # Genişlik ve yükseklikle uyumlu bir numpy dizisi oluşturdum.
+        self.grid = np.zeros((WIDTH*2, HEIGHT+W))
+        self.position = []
+
+# Su eklemek için bir metod tanımladım
+    def addWater(self, pointX, pointY):
+        if pointX >= 0 and pointX <= WIDTH and pointY >= 0 and pointY <= HEIGHT:
+            if self.grid[pointX][pointY] == 0:
+                self.grid[pointX][pointY] = 1
+                self.position.append((pointX, pointY))
+
+# Suyun hareketini güncelleyen bir metod tanımladım.
+    def update_position(self):
+        for points in self.position:
+            listpoints = list(points)
+            self.position.remove(points)
+
+            if points[1] >= HEIGHT - W:
+                self.position.append(points)
+
+            elif self.grid[points[0]][points[1] + W] == 0:
+                self.grid[points[0]][points[1]] = 0
+                self.grid[points[0]][points[1] + W] = 1
+                listpoints[1] += W
+                points = tuple(listpoints)
+                self.position.append(points)
+
+            elif self.grid[points[0]][points[1] + W] == 1:
+                if (self.grid[points[0] + W][points[1] + W] == 1) and (self.grid[points[0] - W][points[1] + W] == 1):
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + W][points[1] + W] == 1) and (self.grid[points[0] - W][points[1] + W] == 0):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] - W][points[1] + W] = 1
+                    listpoints[0] -= W
+                    listpoints[1] += W
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + W][points[1] + W] == 0) and (self.grid[points[0] - W][points[1] + W] == 1):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] + W][points[1] + W] = 1
+                    listpoints[0] += W
+                    listpoints[1] += W
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                else:
+                    self.grid[points[0]][points[1]] = 0
+                    a = random.randint(0, 1)
+                    if a == 0:
+                        a = -1
+                    self.grid[points[0] + a * W][points[1] + W] = 1
+                    listpoints[0] += a * W
+                    listpoints[1] += W
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+    def draw(self, win):
+        for points in self.position:
+            pygame.draw.rect(win, WATER, (points[0], points[1], W, W), 0)
+
+#Aynı şeyleri bitki içinde yapıyoruz.
+class PlantGrid:
+    def __init__(self):
+        self.grid = np.zeros((WIDTH*2, HEIGHT+T))
+        self.position = []
+
+    def addPlant(self, pointX, pointY):
+        if pointX >= 0 and pointX <= WIDTH and pointY >= 0 and pointY <= HEIGHT:
+            if self.grid[pointX][pointY] == 0:
+                self.grid[pointX][pointY] = 1
+                self.position.append((pointX, pointY))
+
+# Bitkilerin büyümesini kontrol eden bir metod tanımladım.
+    def growPlant(self):
+        for points in self.position:
+            for i in range(-W, W+1):
+                for j in range(-W, W+1):
+                    if self.grid[points[0]+i][points[1]+j] == 1 and (i != 0 or j != 0):
+                        return True
+        return False
+
+    def update_position(self):
+        for points in self.position:
+            listpoints = list(points)
+            self.position.remove(points)
+
+            if points[1] >= HEIGHT - T:
+                self.position.append(points)
+
+            elif self.grid[points[0]][points[1] + T] == 0:
+                self.grid[points[0]][points[1]] = 0
+                self.grid[points[0]][points[1] + T] = 1
+                listpoints[1] += T
+                points = tuple(listpoints)
+                self.position.append(points)
+
+            elif self.grid[points[0]][points[1] + T] == 1:
+                if (self.grid[points[0] + T][points[1] + T] == 1) and (self.grid[points[0] - T][points[1] + T] == 1):
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + T][points[1] + T] == 1) and (self.grid[points[0] - T][points[1] + T] == 0):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] - T][points[1] + T] = 1
+                    listpoints[0] -= T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + T][points[1] + T] == 0) and (self.grid[points[0] - T][points[1] + T] == 1):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] + T][points[1] + T] = 1
+                    listpoints[0] += T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                else:
+                    self.grid[points[0]][points[1]] = 0
+                    a = random.randint(0, 1)
+                    if a == 0:
+                        a = -1
+                    self.grid[points[0] + a * T][points[1] + T] = 1
+                    listpoints[0] += a * T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+    def draw(self, win):
+        for points in self.position:
+            pygame.draw.rect(win, PLANT, (points[0], points[1], P, P), 0)
+
+class GunpowderGrid:
+    def __init__(self):
+        self.grid = np.zeros((WIDTH*2, HEIGHT+T))
+        self.position = []
+
+#Barutada aynısına yapıcaz.
+    def addGunpowder(self, pointX, pointY):
+        if pointX >= 0 and pointX <= WIDTH and pointY >= 0 and pointY <= HEIGHT:
+            if self.grid[pointX][pointY] == 0:
+                self.grid[pointX][pointY] = 1
+                self.position.append((pointX, pointY))
+
+    def update_position(self):
+        for points in self.position:
+            listpoints = list(points)
+            self.position.remove(points)
+
+            if points[1] >= HEIGHT - T:
+                self.position.append(points)
+
+            elif self.grid[points[0]][points[1] + T] == 0:
+                self.grid[points[0]][points[1]] = 0
+                self.grid[points[0]][points[1] + T] = 1
+                listpoints[1] += T
+                points = tuple(listpoints)
+                self.position.append(points)
+
+            elif self.grid[points[0]][points[1] + T] == 1:
+                if (self.grid[points[0] + T][points[1] + T] == 1) and (self.grid[points[0] - T][points[1] + T] == 1):
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + T][points[1] + T] == 1) and (self.grid[points[0] - T][points[1] + T] == 0):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] - T][points[1] + T] = 1
+                    listpoints[0] -= T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                elif (self.grid[points[0] + T][points[1] + T] == 0) and (self.grid[points[0] - T][points[1] + T] == 1):
+                    self.grid[points[0]][points[1]] = 0
+                    self.grid[points[0] + T][points[1] + T] = 1
+                    listpoints[0] += T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+                else:
+                    self.grid[points[0]][points[1]] = 0
+                    a = random.randint(0, 1)
+                    if a == 0:
+                        a = -1
+                    self.grid[points[0] + a * T][points[1] + T] = 1
+                    listpoints[0] += a * T
+                    listpoints[1] += T
+                    points = tuple(listpoints)
+                    self.position.append(points)
+
+    def draw(self, win):
+        for points in self.position:
+            pygame.draw.rect(win, (139, 69, 19), (points[0], points[1], T, T), 0)
+
+def draw_settings_menu(win, T, W, P, G):
+    win.fill((50, 50, 50))  #Menü arka planı için karanlık
+    # Dış çizgi kodları
+    border_color = (100, 100, 100)
+    pygame.draw.rect(win, border_color, (WIDTH // 4 - 10, HEIGHT // 4 - 10, WIDTH // 2 + 20, HEIGHT // 2 + 20), 5)
+
+    text_T = FONT.render(f"Kum Boyutu (T): {T}", True, WHITE)
+    text_W = FONT.render(f"Su Boyutu (W): {W}", True, WHITE)
+    text_P = FONT.render(f"Bitki Boyutu (P): {P}", True, WHITE)
+    text_G = FONT.render(f"Barut Boyutu (G): {G}", True, WHITE)
+
+    win.blit(text_T, (WIDTH // 2 - text_T.get_width() // 2, HEIGHT // 2 - 90))
+    win.blit(text_W, (WIDTH // 2 - text_W.get_width() // 2, HEIGHT // 2 - 30))
+    win.blit(text_P, (WIDTH // 2 - text_P.get_width() // 2, HEIGHT // 2 + 30))
+    win.blit(text_G, (WIDTH // 2 - text_G.get_width() // 2, HEIGHT // 2 + 90))
+
+    instructions = SMALL_FONT.render("Kapatmak için ESC tuşuna basın", True, WHITE)
+    win.blit(instructions, (WIDTH // 2 - instructions.get_width() // 2, HEIGHT // 2 + 150))
+
+    pygame.display.update()
+
+def main():
+    run = True
+    clock = pygame.time.Clock()
+    
+    sandbox = Grid()
+    waterbox = WaterGrid()
+    plantbox = PlantGrid()
+    gunpowderbox = GunpowderGrid()
+    
+    settings_menu = False
+    
+    global T, W, P, G
+    
+    while run:
+        clock.tick(100)
+        pygame.display.set_caption("Falling Sand, Water, Plant, and Gunpowder - FPS: {}".format(int(clock.get_fps())))
+        
+        if settings_menu:
+            draw_settings_menu(WIN, T, W, P, G)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+                
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        settings_menu = False
+                    
+                    if event.key == pygame.K_UP:
+                        T += 1
+                    elif event.key == pygame.K_DOWN:
+                        T -= 1
+                    elif event.key == pygame.K_RIGHT:
+                        W += 1
+                    elif event.key == pygame.K_LEFT:
+                        W -= 1
+                    elif event.key == pygame.K_PAGEUP:
+                        P += 1
+                    elif event.key == pygame.K_PAGEDOWN:
+                        P -= 1
+                    elif event.key == pygame.K_HOME:
+                        G += 1
+                    elif event.key == pygame.K_END:
+                        G -= 1
+        else:
+            WIN.fill((0, 0, 0))
+            
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+                
+                elif pygame.mouse.get_pressed()[0]:
+                    pos = pygame.mouse.get_pos()
+                    sandbox.addSand(pos[0] - pos[0] % T, pos[1] - pos[1] % T)
+                
+                elif pygame.mouse.get_pressed()[2]:
+                    pos = pygame.mouse.get_pos()
+                    waterbox.addWater(pos[0] - pos[0] % W, pos[1] - pos[1] % W)
+                
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_f:
+                    pos = pygame.mouse.get_pos()
+                    plantbox.addPlant(pos[0] - pos[0] % T, pos[1] - pos[1] % T)
+                
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_g:
+                    pos = pygame.mouse.get_pos()
+                    gunpowderbox.addGunpowder(pos[0] - pos[0] % G, pos[1] - pos[1] % G)
+                
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+                    settings_menu = True
+            
+            sandbox.update_position()
+            waterbox.update_position()
+            if waterbox.grid.any():
+                if plantbox.growPlant():
+                    plantbox.update_position()
+            plantbox.update_position()
+            gunpowderbox.update_position()
+            
+            sandbox.draw(WIN)
+            waterbox.draw(WIN)
+            plantbox.draw(WIN)
+            gunpowderbox.draw(WIN)
+            
+            pygame.display.update()
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
